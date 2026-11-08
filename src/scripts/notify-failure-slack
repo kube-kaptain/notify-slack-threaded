@@ -19,19 +19,17 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=src/scripts/lib/notify-slack.bash
 source "${script_dir}/lib/notify-slack.bash"
 
-text="$(slack_prefix Failure ":x:")${message}"
+text="$(slack_prefix Failure)${message}"
 
 failed=false
 slack_thread_post "${text}" true || failed=true
-slack_thread_react_for Failure x || failed=true
+slack_thread_react_for Failure || failed=true
 
 permalink=$(slack_thread_permalink) || permalink=""
-leader=$(slack_template slackFailureDmLeader \
-  'Hi {user}, a Kubernetes deployment has failed as shown below. A link to the thread is below that.' \
-  'Hi {user}, a build has failed as shown below. A link to the thread is below that.')
+leader=$(slack_setting slackFailureDmLeader)
 body="${text}"
 if [[ -n "${permalink}" ]]; then
-  label=$(slack_template slackFailureLinkLabel 'Deployment {ENVIRONMENT}:{VERSION} thread:' 'Build thread:')
+  label=$(slack_setting slackFailureLinkLabel)
   body+="
 
 $(slack_link_line "${label}" "${permalink}")"

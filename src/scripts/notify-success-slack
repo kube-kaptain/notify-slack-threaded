@@ -18,6 +18,6 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${script_dir}/lib/notify-slack.bash"
 
 failed=false
-slack_thread_post "$(slack_prefix Success ":white_check_mark:")${message}" || failed=true
-slack_thread_react_for Success white_check_mark || failed=true
+slack_thread_post "$(slack_prefix Success)${message}" || failed=true
+slack_thread_react_for Success || failed=true
 [[ "${failed}" == "false" ]]
