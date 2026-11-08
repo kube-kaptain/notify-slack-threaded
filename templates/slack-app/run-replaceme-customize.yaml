@@ -1,0 +1,23 @@
+display_information:
+  name: Run Multiple With Customize
+  description: Kaptain Kubernetes deployment notifications (per-message name and icon)
+features:
+  bot_user:
+    display_name: Run Multiple With Customize
+    always_online: false
+  app_home:
+    home_tab_enabled: false
+    messages_tab_enabled: true
+    messages_tab_read_only_enabled: true
+oauth_config:
+  scopes:
+    bot:
+      - channels:history
+      - chat:write
+      - chat:write.customize
+      - groups:history
+      - reactions:write
+settings:
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false

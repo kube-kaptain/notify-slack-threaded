@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Kaptain contributors (Fred Cooke)
+#
+# Wrapper for hook-post-versions-and-naming to run the tests. That is the first
+# hook to receive IS_RELEASE.
+#
+# PR builds run every distro. Local and release builds run the default distro
+# only: release builds already passed every distro on the PR, and local builds
+# want a quick answer.
+set -euo pipefail
+
+if [[ "${BUILD_MODE:-}" == "build_server" && "${IS_RELEASE:-}" == "false" ]]; then
+  exec "$(dirname "${BASH_SOURCE[0]}")/run-tests" --all
+fi
+
+exec "$(dirname "${BASH_SOURCE[0]}")/run-tests"

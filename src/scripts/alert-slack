@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Kaptain contributors (Fred Cooke)
+#
+# Slack provider for alert. Posts a standalone message to the alert channel,
+# which is deliberately separate from the deploy channel. Never threaded. Then
+# DMs each user in slackAlertUserIds with the message and a link to it,
+# worded by slackContext or the slackAlertDmLeader/LinkLabel overrides.
+set -euo pipefail
+
+if [[ $# -eq 0 ]]; then
+  echo "Usage: alert-slack <message>" >&2
+  echo "Error: message argument required" >&2
+  exit 42
+fi
+
+message="$*"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=src/scripts/lib/notify-slack.bash
+source "${script_dir}/lib/notify-slack.bash"
+
+channel=$(slack_read_key "${NOTIFY_CONFIG_BASE}" slackAlertChannelId)
+if [[ -z "${channel}" ]]; then
+  echo "slack: slackAlertChannelId not found in ${NOTIFY_CONFIG_BASE}" >&2
+  exit 1
+fi
+
+text="$(slack_prefix Alert ":rotating_light:")${message}"
+
+# Alerts interrupt the humans in the channel, the DMs below ping their own
+mention="<!here>"
+if [[ -f "${NOTIFY_CONFIG_BASE}/slackAlertMention" ]]; then
+  mention=$(slack_read_key "${NOTIFY_CONFIG_BASE}" slackAlertMention)
+fi
+response=$(slack_post "${channel}" "${mention:+${mention} }${text}") || exit 1
+
+permalink=$(slack_permalink "$(yq -p json '.channel' <<< "${response}")" "$(yq -p json '.ts' <<< "${response}")") || permalink=""
+leader=$(slack_template slackAlertDmLeader \
+  'Hi {user}, an alert was raised in a Kubernetes deployment, shown below. A link to it is below that.' \
+  'Hi {user}, an alert was raised in a build, shown below. A link to it is below that.')
+body="${text}"
+if [[ -n "${permalink}" ]]; then
+  label=$(slack_template slackAlertLinkLabel 'Alert in {ENVIRONMENT}:{VERSION}:' 'Alert:')
+  body+="
+
+$(slack_link_line "${label}" "${permalink}")"
+fi
+slack_dm_users slackAlertUserIds "${leader}" "${body}"

@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Kaptain contributors (Fred Cooke)
+#
+# Slack provider for notify-failure. Posts into the deploy thread and the
+# channel itself, marks the message that opened the thread with a cross, then
+# DMs each user in slackFailureUserIds with the message and a thread link,
+# worded by slackContext or the slackFailureDmLeader/LinkLabel overrides.
+set -euo pipefail
+
+if [[ $# -eq 0 ]]; then
+  echo "Usage: notify-failure-slack <message>" >&2
+  echo "Error: message argument required" >&2
+  exit 42
+fi
+
+message="$*"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=src/scripts/lib/notify-slack.bash
+source "${script_dir}/lib/notify-slack.bash"
+
+text="$(slack_prefix Failure ":x:")${message}"
+
+failed=false
+slack_thread_post "${text}" true || failed=true
+slack_thread_react_for Failure x || failed=true
+
+permalink=$(slack_thread_permalink) || permalink=""
+leader=$(slack_template slackFailureDmLeader \
+  'Hi {user}, a Kubernetes deployment has failed as shown below. A link to the thread is below that.' \
+  'Hi {user}, a build has failed as shown below. A link to the thread is below that.')
+body="${text}"
+if [[ -n "${permalink}" ]]; then
+  label=$(slack_template slackFailureLinkLabel 'Deployment {ENVIRONMENT}:{VERSION} thread:' 'Build thread:')
+  body+="
+
+$(slack_link_line "${label}" "${permalink}")"
+fi
+slack_dm_users slackFailureUserIds "${leader}" "${body}" || failed=true
+[[ "${failed}" == "false" ]]

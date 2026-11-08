@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Kaptain contributors (Fred Cooke)
+#
+# Slack provider for notify-success. Posts into the deploy thread, then marks
+# the message that opened it with a tick.
+set -euo pipefail
+
+if [[ $# -eq 0 ]]; then
+  echo "Usage: notify-success-slack <message>" >&2
+  echo "Error: message argument required" >&2
+  exit 42
+fi
+
+message="$*"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=src/scripts/lib/notify-slack.bash
+source "${script_dir}/lib/notify-slack.bash"
+
+failed=false
+slack_thread_post "$(slack_prefix Success ":white_check_mark:")${message}" || failed=true
+slack_thread_react_for Success white_check_mark || failed=true
+[[ "${failed}" == "false" ]]
