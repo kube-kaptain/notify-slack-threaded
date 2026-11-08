@@ -4,7 +4,7 @@
 # supplying their own ConfigMap and Secret. The notify layer writes these keys
 # for you, with tokens in the right format, so most people never need this.
 #
-# The token references here, such as ${Category/Name}, use shell style
+# The token references here, such as ${RunReplaceme/NotifySlackThreaded/ChannelId}, use shell style
 # delimiters and PascalCase names. If you supply this file yourself they must
 # match your env project's TOKEN_DELIMITER_STYLE and TOKEN_NAME_STYLE.
 #
@@ -25,50 +25,50 @@ data:
 
   # Required
   slackContext: "deploy"
-  slackChannelId: "${NotifySlackThreaded/ChannelId}"
-  slackAlertChannelId: "${NotifySlackThreaded/AlertChannelId}"
+  slackChannelId: "${RunReplaceme/NotifySlackThreaded/ChannelId}"
+  slackAlertChannelId: "${RunReplaceme/NotifySlackThreaded/AlertChannelId}"
 
   # Who to DM, user IDs (U0...) separated by commas and/or spaces
-  # slackFailureUserIds: "${NotifySlackThreaded/FailureUserIds}"
-  # slackAlertUserIds: "${NotifySlackThreaded/AlertUserIds}"
+  # slackFailureUserIds: "${RunReplaceme/NotifySlackThreaded/FailureUserIds}"
+  # slackAlertUserIds: "${RunReplaceme/NotifySlackThreaded/AlertUserIds}"
 
   # 'true' makes Slack validation failures stop the deploy, default false
-  # slackRequired: "${NotifySlackThreaded/Required}"
+  # slackRequired: "${RunReplaceme/NotifySlackThreaded/Required}"
 
   # Post under another name and icon, needs chat:write.customize
-  # slackUsername: "${NotifySlackThreaded/Username}"
-  # slackIconEmoji: "${NotifySlackThreaded/IconEmoji}"
-  # slackIconUrl: "${NotifySlackThreaded/IconUrl}"
+  # slackUsername: "${RunReplaceme/NotifySlackThreaded/Username}"
+  # slackIconEmoji: "${RunReplaceme/NotifySlackThreaded/IconEmoji}"
+  # slackIconUrl: "${RunReplaceme/NotifySlackThreaded/IconUrl}"
 
   # Days of history searched to rejoin a thread, default 30
-  # slackThreadLookbackDays: "${NotifySlackThreaded/ThreadLookbackDays}"
+  # slackThreadLookbackDays: "${RunReplaceme/NotifySlackThreaded/ThreadLookbackDays}"
 
   # Mention at the start of alert posts, default <!here>
-  # slackAlertMention: "${NotifySlackThreaded/AlertMention}"
+  # slackAlertMention: "${RunReplaceme/NotifySlackThreaded/AlertMention}"
 
   # Text before each message, defaults: none, :warning:, :rotating_light:,
   # :white_check_mark:, :x:, :rotating_light:
-  # slackInfoPrefix: "${NotifySlackThreaded/InfoPrefix}"
-  # slackWarningPrefix: "${NotifySlackThreaded/WarningPrefix}"
-  # slackErrorPrefix: "${NotifySlackThreaded/ErrorPrefix}"
-  # slackSuccessPrefix: "${NotifySlackThreaded/SuccessPrefix}"
-  # slackFailurePrefix: "${NotifySlackThreaded/FailurePrefix}"
-  # slackAlertPrefix: "${NotifySlackThreaded/AlertPrefix}"
+  # slackInfoPrefix: "${RunReplaceme/NotifySlackThreaded/InfoPrefix}"
+  # slackWarningPrefix: "${RunReplaceme/NotifySlackThreaded/WarningPrefix}"
+  # slackErrorPrefix: "${RunReplaceme/NotifySlackThreaded/ErrorPrefix}"
+  # slackSuccessPrefix: "${RunReplaceme/NotifySlackThreaded/SuccessPrefix}"
+  # slackFailurePrefix: "${RunReplaceme/NotifySlackThreaded/FailurePrefix}"
+  # slackAlertPrefix: "${RunReplaceme/NotifySlackThreaded/AlertPrefix}"
 
   # Reaction on the thread's first post, defaults warning, white_check_mark and x
-  # slackWarningReaction: "${NotifySlackThreaded/WarningReaction}"
-  # slackSuccessReaction: "${NotifySlackThreaded/SuccessReaction}"
-  # slackFailureReaction: "${NotifySlackThreaded/FailureReaction}"
+  # slackWarningReaction: "${RunReplaceme/NotifySlackThreaded/WarningReaction}"
+  # slackSuccessReaction: "${RunReplaceme/NotifySlackThreaded/SuccessReaction}"
+  # slackFailureReaction: "${RunReplaceme/NotifySlackThreaded/FailureReaction}"
 
   # curl retry and timeouts in seconds, defaults 3, 2, 10, 20, 70
-  # slackCurlRetry: "${NotifySlackThreaded/CurlRetry}"
-  # slackCurlRetryDelay: "${NotifySlackThreaded/CurlRetryDelay}"
-  # slackCurlConnectTimeout: "${NotifySlackThreaded/CurlConnectTimeout}"
-  # slackCurlMaxTime: "${NotifySlackThreaded/CurlMaxTime}"
-  # slackCurlRetryMaxTime: "${NotifySlackThreaded/CurlRetryMaxTime}"
+  # slackCurlRetry: "${RunReplaceme/NotifySlackThreaded/CurlRetry}"
+  # slackCurlRetryDelay: "${RunReplaceme/NotifySlackThreaded/CurlRetryDelay}"
+  # slackCurlConnectTimeout: "${RunReplaceme/NotifySlackThreaded/CurlConnectTimeout}"
+  # slackCurlMaxTime: "${RunReplaceme/NotifySlackThreaded/CurlMaxTime}"
+  # slackCurlRetryMaxTime: "${RunReplaceme/NotifySlackThreaded/CurlRetryMaxTime}"
 
   # DM wording, {user} mentions the recipient, {ENV_VAR} inserts its value
-  # slackFailureDmLeader: "${NotifySlackThreaded/FailureDmLeader}"
-  # slackFailureLinkLabel: "${NotifySlackThreaded/FailureLinkLabel}"
-  # slackAlertDmLeader: "${NotifySlackThreaded/AlertDmLeader}"
-  # slackAlertLinkLabel: "${NotifySlackThreaded/AlertLinkLabel}"
+  # slackFailureDmLeader: "${RunReplaceme/NotifySlackThreaded/FailureDmLeader}"
+  # slackFailureLinkLabel: "${RunReplaceme/NotifySlackThreaded/FailureLinkLabel}"
+  # slackAlertDmLeader: "${RunReplaceme/NotifySlackThreaded/AlertDmLeader}"
+  # slackAlertLinkLabel: "${RunReplaceme/NotifySlackThreaded/AlertLinkLabel}"

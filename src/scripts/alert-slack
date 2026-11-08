@@ -25,22 +25,17 @@ if [[ -z "${channel}" ]]; then
   exit 1
 fi
 
-text="$(slack_prefix Alert ":rotating_light:")${message}"
+text="$(slack_prefix Alert)${message}"
 
 # Alerts interrupt the humans in the channel, the DMs below ping their own
-mention="<!here>"
-if [[ -f "${NOTIFY_CONFIG_BASE}/slackAlertMention" ]]; then
-  mention=$(slack_read_key "${NOTIFY_CONFIG_BASE}" slackAlertMention)
-fi
+mention=$(slack_setting slackAlertMention)
 response=$(slack_post "${channel}" "${mention:+${mention} }${text}") || exit 1
 
 permalink=$(slack_permalink "$(yq -p json '.channel' <<< "${response}")" "$(yq -p json '.ts' <<< "${response}")") || permalink=""
-leader=$(slack_template slackAlertDmLeader \
-  'Hi {user}, an alert was raised in a Kubernetes deployment, shown below. A link to it is below that.' \
-  'Hi {user}, an alert was raised in a build, shown below. A link to it is below that.')
+leader=$(slack_setting slackAlertDmLeader)
 body="${text}"
 if [[ -n "${permalink}" ]]; then
-  label=$(slack_template slackAlertLinkLabel 'Alert in {ENVIRONMENT}:{VERSION}:' 'Alert:')
+  label=$(slack_setting slackAlertLinkLabel)
   body+="
 
 $(slack_link_line "${label}" "${permalink}")"

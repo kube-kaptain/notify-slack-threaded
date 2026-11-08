@@ -85,6 +85,8 @@ rm -rf "${BUILD_CONTEXT}"
 mkdir -p "${BUILD_CONTEXT}"
 cp "${TEMPLATES_DIR}/run-bats.bash" "${BUILD_CONTEXT}/"
 cp -R "${SCRIPTS_DIR}" "${BUILD_CONTEXT}/"
+# The scripts read their defaults from beside their lib, as in the real image
+cp -R "${SRC_DIR}/defaults" "${BUILD_CONTEXT}/scripts/lib/notify-slack-defaults"
 
 built_ids=""
 cleanup() {

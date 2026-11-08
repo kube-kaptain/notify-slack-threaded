@@ -17,4 +17,4 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=src/scripts/lib/notify-slack.bash
 source "${script_dir}/lib/notify-slack.bash"
 
-slack_thread_post "$(slack_prefix Error ":rotating_light:")${message}"
+slack_thread_post "$(slack_prefix Error)${message}"

@@ -20,10 +20,15 @@
 #   ${NOTIFY_CONFIG_BASE}/slackThreadLookbackDays Optional, days of history searched for NOTIFY_THREAD_KEY, default 30
 #   ${NOTIFY_CONFIG_BASE}/slackContext          'deploy' or 'build', picks the default DM wording
 #   ${NOTIFY_CONFIG_BASE}/slackCurl<Setting>    Optional, curl retry and timeouts, see slack_curl_settings
-#   ${NOTIFY_CONFIG_BASE}/slackFailureDmLeader  Optional, first line of failure DMs, see slack_template
+#   ${NOTIFY_CONFIG_BASE}/slackFailureDmLeader  Optional, first line of failure DMs, default per slackContext
 #   ${NOTIFY_CONFIG_BASE}/slackFailureLinkLabel Optional, text before the thread link in failure DMs
 #   ${NOTIFY_CONFIG_BASE}/slackAlertDmLeader    Optional, first line of alert DMs
 #   ${NOTIFY_CONFIG_BASE}/slackAlertLinkLabel   Optional, text before the alert link in alert DMs
+#
+# The optional entries' defaults are files in lib/notify-slack-defaults/, one
+# per entry, with deploy/ and build/ variants picked by slackContext for the DM
+# wording, packaged there from src/defaults. Absent gives the default, present
+# but empty turns it off.
 #
 # NOTIFY_CONFIG_BASE, NOTIFY_SECRETS_BASE and NOTIFY_WORK_BASE must be set by
 # the caller, there are no defaults. The thread is recorded by the first post
@@ -36,6 +41,8 @@
 # Unset, each run opens its own thread.
 
 # shellcheck disable=SC2154 # NOTIFY_*_BASE are set by the caller, see above
+SLACK_DEFAULTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/notify-slack-defaults"
+
 # Print the value of a config or secret key, empty if absent
 slack_read_key() {
   local file="$1/$2"
@@ -43,16 +50,38 @@ slack_read_key() {
   tr -d '\r\n' < "${file}"
 }
 
-# Print the message prefix for a level followed by a space. The key is
-# slack<Level>Prefix, for example slackWarningPrefix. Absent gives the default,
-# present but empty disables it, anything else replaces it.
+# Print the plugin's default for an optional entry, the slackContext variant
+# for the entries that differ between deploy and build
+slack_default() {
+  local key="$1"
+  local context
+  if [[ -f "${SLACK_DEFAULTS_DIR}/${key}" ]]; then
+    slack_read_key "${SLACK_DEFAULTS_DIR}" "${key}"
+    return 0
+  fi
+  context=$(slack_read_key "${NOTIFY_CONFIG_BASE}" slackContext)
+  if [[ "${context}" == "deploy" || "${context}" == "build" ]]; then
+    slack_read_key "${SLACK_DEFAULTS_DIR}/${context}" "${key}"
+  fi
+}
+
+# Print an optional entry's value: the config entry when present, empty
+# included, which turns it off, otherwise the plugin's default
+slack_setting() {
+  local key="$1"
+  if [[ -f "${NOTIFY_CONFIG_BASE}/${key}" ]]; then
+    slack_read_key "${NOTIFY_CONFIG_BASE}" "${key}"
+  else
+    slack_default "${key}"
+  fi
+}
+
+# Print the message prefix for a level followed by a space, from
+# slack<Level>Prefix, for example slackWarningPrefix
 slack_prefix() {
   local level="$1"
-  local default="$2"
-  local value="${default}"
-  if [[ -f "${NOTIFY_CONFIG_BASE}/slack${level}Prefix" ]]; then
-    value=$(slack_read_key "${NOTIFY_CONFIG_BASE}" "slack${level}Prefix")
-  fi
+  local value
+  value=$(slack_setting "slack${level}Prefix")
   if [[ -n "${value}" ]]; then
     printf '%s ' "${value}"
   fi
@@ -87,17 +116,14 @@ slack_api_get() {
 # Print the curl retry and timeout arguments. Defaults favour getting every
 # message through, in order, on unreliable networks over speed. Each can be
 # overridden with a whole number in slackCurl<Setting>, for example
-# slackCurlMaxTime. Invalid values fall back to the default.
+# slackCurlMaxTime. Invalid or empty values fall back to the default.
 slack_curl_settings() {
   local setting
-  local default
   local value
-  for setting in Retry:3 RetryDelay:2 ConnectTimeout:10 MaxTime:20 RetryMaxTime:70; do
-    default="${setting#*:}"
-    setting="${setting%%:*}"
+  for setting in Retry RetryDelay ConnectTimeout MaxTime RetryMaxTime; do
     value=$(slack_read_key "${NOTIFY_CONFIG_BASE}" "slackCurl${setting}")
     if [[ ! "${value}" =~ ^[0-9]+$ ]]; then
-      value="${default}"
+      value=$(slack_default "slackCurl${setting}")
     fi
     case "${setting}" in
       Retry) printf -- '--retry\n%s\n' "${value}" ;;
@@ -238,7 +264,7 @@ slack_find_thread() {
   local days
   days=$(slack_read_key "${NOTIFY_CONFIG_BASE}" slackThreadLookbackDays)
   if [[ ! "${days}" =~ ^[0-9]+$ ]]; then
-    days=30
+    days=$(slack_default slackThreadLookbackDays)
   fi
   local oldest=$(( $(date +%s) - days * 86400 ))
 
@@ -279,21 +305,6 @@ slack_user_ids() {
   tr -c 'A-Za-z0-9' '\n' < "${file}" | grep -v '^$' || true
 }
 
-# Print a DM template. The config key wins if present, empty included, which
-# disables it. Otherwise the deploy or build default, chosen by slackContext.
-slack_template() {
-  local key="$1"
-  local deploy_default="$2"
-  local build_default="$3"
-  if [[ -f "${NOTIFY_CONFIG_BASE}/${key}" ]]; then
-    slack_read_key "${NOTIFY_CONFIG_BASE}" "${key}"
-    return 0
-  fi
-  case "$(slack_read_key "${NOTIFY_CONFIG_BASE}" slackContext)" in
-    deploy) printf '%s' "${deploy_default}" ;;
-    build) printf '%s' "${build_default}" ;;
-  esac
-}
 
 # Expand tokens in a template. {user} becomes a mention of the given user ID,
 # {NAME} becomes the value of env var NAME. Unset vars are left as {NAME} so a
@@ -367,17 +378,13 @@ slack_thread_permalink() {
 
 # Add the reaction for a kind of message, a warning or an outcome, to the
 # message that opened the deploy thread. The key is slack<Kind>Reaction, for
-# example slackSuccessReaction. Absent gives the default, present but empty
-# disables it, anything else replaces it. Surrounding colons are optional,
+# example slackSuccessReaction. Surrounding colons are optional,
 # Slack wants the bare name. A reaction already there is not an error, so a
 # thread with ten warnings shows one.
 slack_thread_react_for() {
   local kind="$1"
-  local default="$2"
-  local name="${default}"
-  if [[ -f "${NOTIFY_CONFIG_BASE}/slack${kind}Reaction" ]]; then
-    name=$(slack_read_key "${NOTIFY_CONFIG_BASE}" "slack${kind}Reaction")
-  fi
+  local name
+  name=$(slack_setting "slack${kind}Reaction")
   name="${name#:}"
   name="${name%:}"
   if [[ -n "${name}" ]]; then

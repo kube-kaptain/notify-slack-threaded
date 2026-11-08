@@ -67,3 +67,18 @@ fields() {
     esac
   done < <(fields)
 }
+
+@test "every optional field has a default, for both contexts where it varies, and no default is spare" {
+  local defaults_dir="/kd/bin/lib/notify-slack-defaults"
+  optional=$(fields | grep '/optional/' | sed 's|.*/||' | sort)
+  common=$(cd "${defaults_dir}" && find . -maxdepth 1 -type f | sed 's|^\./||' | sort)
+  deploy=$(cd "${defaults_dir}/deploy" && find . -type f | sed 's|^\./||' | sort)
+  build=$(cd "${defaults_dir}/build" && find . -type f | sed 's|^\./||' | sort)
+  [[ "${deploy}" == "${build}" ]] || { echo "deploy and build defaults differ in which entries they hold"; return 1; }
+  covered=$(printf '%s\n%s\n' "${common}" "${deploy}" | sort)
+  [[ "${covered}" == "${optional}" ]] || {
+    echo "optional fields and defaults differ:"
+    diff <(echo "${optional}") <(echo "${covered}") || true
+    return 1
+  }
+}
