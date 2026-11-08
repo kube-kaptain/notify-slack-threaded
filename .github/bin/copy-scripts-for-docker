@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Kaptain contributors (Fred Cooke)
+#
+# Copy the Slack notify provider scripts and the fields that document what
+# they need into the Docker build context, and zip each for the GitHub release.
+#
+# The fields dir has one file per ConfigMap or Secret entry, named for the
+# entry, in configmap/ or secret.template/, then required/, optional/ or
+# context/. A required or optional file holds the entry's canonical token name.
+# A context file holds the values a writer may choose from, such as deploy.
+set -euo pipefail
+
+OUTPUT_SUB_PATH="${OUTPUT_SUB_PATH:?OUTPUT_SUB_PATH is required!}"
+mkdir -p "${OUTPUT_SUB_PATH}"
+
+for part in scripts fields; do
+  for context in "${DOCKER_CONTEXT_SUB_PATH_LINUX_AMD64}" "${DOCKER_CONTEXT_SUB_PATH_LINUX_ARM64}"; do
+    mkdir -p "${context}/${part}"
+    cp -a "src/${part}/." "${context}/${part}/"
+    echo "Copied $(find "${context}/${part}" -type f | wc -l | tr -d ' ') ${part} files to ${context}/${part}"
+  done
+done
+echo
+
+# Zips for GitHub release attachment
+for zip_name in notify-slack-threaded.zip:scripts notify-slack-threaded-fields.zip:fields; do
+  part="${zip_name#*:}"
+  release_zip="${OUTPUT_SUB_PATH}/${zip_name%:*}"
+  output_dir_absolute=$(cd "${OUTPUT_SUB_PATH}" && pwd)
+  (cd "src/${part}" && zip -qr "${output_dir_absolute}/${zip_name%:*}" .)
+  echo "Created ${release_zip} with $(unzip -l "${release_zip}" | tail -1 | awk '{print $2}') files"
+done
+echo

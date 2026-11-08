@@ -1,0 +1,26 @@
+apiVersion: kaptain.org/1.39
+kind: docker-build-dockerfile
+metadata:
+  description: "Kaptain Slack threaded notify provider scripts packaged as OCI image"
+
+spec:
+  layers:
+    - layer-github-flow-strict:[1.4]
+  global:
+    release:
+      versioning:
+        maxParts: 2
+  main:
+    docker:
+      platform: linux/amd64,linux/arm64
+      dockerfile:
+        subPathLinuxAmd64: src/docker
+        subPathLinuxArm64: src/docker
+        squash: 'no'  # FROM scratch - no point.
+    hooks:
+      postVersionsAndNaming: .github/bin/run-tests-all
+      preDockerPrepare: .github/bin/copy-scripts-for-docker
+  platform:
+    githubActions:
+      release:
+        verbatimFiles: kaptain-out/notify-slack-threaded.zip kaptain-out/notify-slack-threaded-fields.zip

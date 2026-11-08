@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Kaptain contributors (Fred Cooke)
+FROM {{BASE_IMAGE}}
+RUN apk add --no-cache bats
+COPY --chmod=755 run-bats.bash /usr/local/bin/run-bats
+COPY --chmod=755 scripts/ /kd/bin
+USER ${KAPTAIN_USER_ID}

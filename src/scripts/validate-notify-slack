@@ -1,0 +1,130 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Kaptain contributors (Fred Cooke)
+#
+# Validate the Slack notify configuration against what the token can actually
+# do. Run by validate-notify before the first message of the deploy.
+#
+# Failures only block the deploy when slackRequired is 'true'. Otherwise they
+# are reported and the deploy carries on, with Slack messages failing quietly.
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=src/scripts/lib/notify-slack.bash
+source "${script_dir}/lib/notify-slack.bash"
+
+failures=0
+
+fail() {
+  echo "  FAIL: $*" >&2
+  failures=$((failures + 1))
+}
+
+echo "=== Validate Slack Notify ==="
+
+token=$(slack_read_key "${NOTIFY_SECRETS_BASE}" slackBotToken)
+channel=$(slack_read_key "${NOTIFY_CONFIG_BASE}" slackChannelId)
+alert_channel=$(slack_read_key "${NOTIFY_CONFIG_BASE}" slackAlertChannelId)
+username=$(slack_read_key "${NOTIFY_CONFIG_BASE}" slackUsername)
+icon_emoji=$(slack_read_key "${NOTIFY_CONFIG_BASE}" slackIconEmoji)
+icon_url=$(slack_read_key "${NOTIFY_CONFIG_BASE}" slackIconUrl)
+required=$(slack_read_key "${NOTIFY_CONFIG_BASE}" slackRequired)
+
+if [[ -z "${token}" ]]; then
+  fail "slackBotToken not found in ${NOTIFY_SECRETS_BASE}"
+elif [[ "${token}" != xoxb-* ]]; then
+  fail "slackBotToken is not a bot token (xoxb-...)"
+fi
+
+if [[ -z "${channel}" ]]; then
+  fail "slackChannelId not found in ${NOTIFY_CONFIG_BASE}"
+elif [[ ! "${channel}" =~ ^[CG][A-Z0-9]+$ ]]; then
+  fail "slackChannelId '${channel}' is not a channel ID (C0...), names are not accepted"
+fi
+
+if [[ -z "${alert_channel}" ]]; then
+  fail "slackAlertChannelId not found in ${NOTIFY_CONFIG_BASE}"
+elif [[ ! "${alert_channel}" =~ ^[CG][A-Z0-9]+$ ]]; then
+  fail "slackAlertChannelId '${alert_channel}' is not a channel ID (C0...), names are not accepted"
+fi
+
+for key in slackFailureUserIds slackAlertUserIds; do
+  for user_id in $(slack_user_ids "${key}"); do
+    if [[ ! "${user_id}" =~ ^[UW][A-Z0-9]+$ ]]; then
+      fail "${key} entry '${user_id}' is not a user ID (U0...), names are not accepted"
+    fi
+  done
+done
+
+context=$(slack_read_key "${NOTIFY_CONFIG_BASE}" slackContext)
+if [[ "${context}" != "deploy" && "${context}" != "build" ]]; then
+  fail "slackContext must be 'deploy' or 'build', got '${context}'"
+fi
+
+for setting in Retry RetryDelay ConnectTimeout MaxTime RetryMaxTime; do
+  value=$(slack_read_key "${NOTIFY_CONFIG_BASE}" "slackCurl${setting}")
+  if [[ -n "${value}" && ! "${value}" =~ ^[0-9]+$ ]]; then
+    fail "slackCurl${setting} '${value}' is not a whole number"
+  fi
+done
+
+lookback_days=$(slack_read_key "${NOTIFY_CONFIG_BASE}" slackThreadLookbackDays)
+if [[ -n "${lookback_days}" && ! "${lookback_days}" =~ ^[0-9]+$ ]]; then
+  fail "slackThreadLookbackDays '${lookback_days}' is not a whole number of days"
+fi
+
+if [[ -n "${icon_emoji}" && -n "${icon_url}" ]]; then
+  fail "slackIconEmoji and slackIconUrl are both set, pick one"
+fi
+
+customized=false
+if [[ -n "${username}${icon_emoji}${icon_url}" ]]; then
+  customized=true
+fi
+
+# Only worth asking Slack if the token looks right
+if [[ "${token}" == xoxb-* ]]; then
+  headers_file=$(mktemp)
+  trap 'rm -f "${headers_file}"' EXIT
+
+  if response=$(slack_api auth.test '{}' "${headers_file}"); then
+    scopes=$(grep -i '^x-oauth-scopes:' "${headers_file}" | cut -d: -f2- | tr -d ' \r')
+    for scope in chat:write reactions:write; do
+      if [[ ",${scopes}," != *",${scope},"* ]]; then
+        fail "token lacks the ${scope} scope"
+      fi
+    done
+    if [[ "${customized}" == "true" && ",${scopes}," != *",chat:write.customize,"* ]]; then
+      fail "slackUsername/slackIconEmoji/slackIconUrl set but token lacks chat:write.customize, Slack would silently ignore them"
+    fi
+
+    # Joining an earlier run's thread means reading the channel history
+    if [[ -n "${NOTIFY_THREAD_KEY:-}" && -n "${channel}" ]]; then
+      if ! slack_api_get conversations.history "channel=${channel}" "limit=1" > /dev/null; then
+        fail "cannot read slackChannelId history, needed to share threads by NOTIFY_THREAD_KEY (channels:history, or groups:history if private)"
+      fi
+    fi
+
+    bot=$(yq -p json '.user' <<< "${response}")
+    team=$(yq -p json '.team' <<< "${response}")
+    if [[ "${customized}" == "true" ]]; then
+      echo "  Posting as app '${bot}' in '${team}', customized as '${username:-${bot}}'"
+    else
+      echo "  Posting as app '${bot}' in '${team}'"
+    fi
+  else
+    fail "auth.test rejected the token, see above"
+  fi
+fi
+
+if [[ "${failures}" -eq 0 ]]; then
+  echo "  OK: Slack notify configuration"
+  exit 0
+fi
+
+if [[ "${required}" == "true" ]]; then
+  echo "Slack notify validation failed with ${failures} error(s) and slackRequired is true" >&2
+  exit 1
+fi
+
+echo "Slack notify validation failed with ${failures} error(s), continuing as slackRequired is not true" >&2

@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Kaptain contributors (Fred Cooke)
+#
+# Validate that the tooling the Slack notify providers need is present.
+# Run by validate-tooling during deploy image builds and before each deploy.
+set -euo pipefail
+
+failures=0
+
+for name in curl yq; do
+  if command -v "${name}" &> /dev/null; then
+    echo "  OK: ${name} (slack)"
+  else
+    echo "  MISSING: ${name} (slack)" >&2
+    failures=$((failures + 1))
+  fi
+done
+
+[[ "${failures}" -eq 0 ]]

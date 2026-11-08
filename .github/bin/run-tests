@@ -1,0 +1,137 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Kaptain contributors (Fred Cooke)
+#
+# Check the provider scripts are executable and pass shellcheck with the same
+# style checks as kaptain-deploy-scripts, then run the BATS tests inside a
+# container per supported base image, with the scripts in /kd/bin as they ship.
+#
+# Usage: run-tests [--all] [--one <name>]
+#   Default runs the default distro only, --all runs every distro, --one runs
+#   only the named .bats file (without .bats extension).
+#
+# Runs on host (macOS bash 3.2+) - no bash 4+ features.
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SRC_DIR="${REPO_ROOT}/src"
+SCRIPTS_DIR="${SRC_DIR}/scripts"
+TEMPLATES_DIR="${SRC_DIR}/test/docker-templates"
+BUILD_CONTEXT="${REPO_ROOT}/target/docker"
+CONTAINER_RUNTIME="${IMAGE_BUILD_COMMAND:?IMAGE_BUILD_COMMAND is required, run via kaptain build}"
+
+# The scripts do not use kubectl, so one base image tag per distro is enough
+BASE_IMAGE_PREFIX="ghcr.io/kube-kaptain/image/image-environment-base"
+BASE_IMAGE_TAG="1.37.1"
+
+# Distros - must match Dockerfile template suffixes
+DISTROS="alpine-3-23 trixie-slim ubi-9-minimal ubuntu-24-04-lts"
+DEFAULT_DISTRO="trixie-slim"
+
+run_all=false
+one_bats=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --all) run_all=true ;;
+    --one)
+      shift
+      one_bats="$1"
+      ;;
+    *)
+      echo "Usage: run-tests [--all] [--one <name>]" >&2
+      exit 42
+      ;;
+  esac
+  shift
+done
+
+failures=0
+for script in "${SCRIPTS_DIR}"/*; do
+  [[ -f "${script}" ]] || continue
+  if [[ ! -x "${script}" ]]; then
+    echo "  NOT EXECUTABLE: ${script#"${REPO_ROOT}/"}" >&2
+    failures=$((failures + 1))
+  fi
+done
+if [[ "${failures}" -gt 0 ]]; then
+  exit 1
+fi
+
+scripts="$(find "${SCRIPTS_DIR}" -type f | sort | tr '\n' ' ')"
+
+enables="
+  --external-sources
+  --enable=require-variable-braces
+  --enable=require-double-brackets
+  --enable=avoid-nullary-conditions
+  --enable=check-unassigned-uppercase
+  --enable=deprecate-which
+"
+
+echo "Running shellcheck on $(echo "${scripts}" | wc -w | tr -d ' ') scripts"
+# shellcheck disable=SC2086 # Word splitting intended for the lists
+if command -v shellcheck > /dev/null 2>&1; then
+  (cd "${REPO_ROOT}" && shellcheck ${enables} ${scripts//${REPO_ROOT}\//})
+else
+  "${CONTAINER_RUNTIME}" run --rm \
+    -v "${REPO_ROOT}:/workspace" -w /workspace \
+    koalaman/shellcheck:v0.10.0 \
+    ${enables} ${scripts//${REPO_ROOT}\//}
+fi
+echo "  shellcheck passed"
+echo ""
+
+rm -rf "${BUILD_CONTEXT}"
+mkdir -p "${BUILD_CONTEXT}"
+cp "${TEMPLATES_DIR}/run-bats.bash" "${BUILD_CONTEXT}/"
+cp -R "${SCRIPTS_DIR}" "${BUILD_CONTEXT}/"
+
+built_ids=""
+cleanup() {
+  local id
+  for id in ${built_ids}; do
+    "${CONTAINER_RUNTIME}" rmi -f "${id}" > /dev/null 2>&1 || true
+  done
+}
+trap 'cleanup' EXIT
+
+distros="${DEFAULT_DISTRO}"
+if [[ "${run_all}" == "true" ]]; then
+  distros="${DISTROS}"
+fi
+
+bats_args=""
+if [[ -n "${one_bats}" ]]; then
+  bats_args="/kd/test/${one_bats}.bats"
+fi
+
+passed=0
+failed=0
+for distro in ${distros}; do
+  base_image="${BASE_IMAGE_PREFIX}-${distro}:${BASE_IMAGE_TAG}"
+  sed "s|{{BASE_IMAGE}}|${base_image}|g" "${TEMPLATES_DIR}/Dockerfile.${distro}" > "${BUILD_CONTEXT}/Dockerfile.${distro}"
+
+  echo "Building test image: ${distro}"
+  image_id=$("${CONTAINER_RUNTIME}" build -q --no-cache -f "${BUILD_CONTEXT}/Dockerfile.${distro}" "${BUILD_CONTEXT}")
+  built_ids="${built_ids} ${image_id}"
+
+  echo "Running tests: ${distro}"
+  # shellcheck disable=SC2086 # Empty bats_args must vanish
+  if "${CONTAINER_RUNTIME}" run --rm \
+      -v "${SRC_DIR}/test:/kd/test:ro" \
+      -v "${SRC_DIR}/fields:/kd/fields:ro" \
+      -v "${REPO_ROOT}/templates:/kd/templates:ro" \
+      "${image_id}" run-bats ${bats_args}; then
+    echo "  PASSED: ${distro}"
+    passed=$((passed + 1))
+  else
+    echo "  FAILED: ${distro}"
+    failed=$((failed + 1))
+  fi
+  echo ""
+done
+
+echo "=== Results ==="
+echo "Passed: ${passed}"
+echo "Failed: ${failed}"
+[[ "${failed}" -eq 0 ]]

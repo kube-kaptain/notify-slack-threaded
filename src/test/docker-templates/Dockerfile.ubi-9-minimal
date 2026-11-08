@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Kaptain contributors (Fred Cooke)
+FROM {{BASE_IMAGE}}
+ARG BATS_VERSION=1.13.0
+ARG BATS_SHA512=1fc4fb87c454994496492ac975e9a50ac9b365d431c638120c54670978476a3f8af42fbf16fab7e9ceae56e31d7ab18819864a87b4c0780c2898a987d286922d
+RUN microdnf clean all
+RUN curl -fsSL "https://github.com/bats-core/bats-core/archive/refs/tags/v${BATS_VERSION}.tar.gz" -o /tmp/bats.tar.gz \
+    && echo "${BATS_SHA512}  /tmp/bats.tar.gz" | sha512sum -c - \
+    && tar -xzf /tmp/bats.tar.gz -C /tmp \
+    && /tmp/bats-core-${BATS_VERSION}/install.sh /usr/local \
+    && rm -rf /tmp/bats.tar.gz /tmp/bats-core-${BATS_VERSION}
+COPY --chmod=755 run-bats.bash /usr/local/bin/run-bats
+COPY --chmod=755 scripts/ /kd/bin
+USER ${KAPTAIN_USER_ID}
