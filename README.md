@@ -120,6 +120,6 @@ COPY --from=ghcr.io/kube-kaptain/notify/notify-slack-threaded:1.1 /scripts /kd/b
 
 Then supply your own ConfigMap and Secret, starting from `templates/env-configmap/` and `templates/env-secret/`.
 
-### Kaptain Build
+<todo ### Kaptain Build>
 
 <todo some setting in early build that pulls in and wires up to logging system>
