@@ -5,25 +5,25 @@
 #
 # Configuration is one key per file, as Kubernetes mounts a ConfigMap/Secret:
 #
-#   ${NOTIFY_SECRETS_BASE}/slackBotToken        Bot token, xoxb-...
-#   ${NOTIFY_CONFIG_BASE}/slackChannelId        Deploy thread channel, C0...
-#   ${NOTIFY_CONFIG_BASE}/slackAlertChannelId   Alert channel, C0..., separate from the deploy channel
-#   ${NOTIFY_CONFIG_BASE}/slackUsername         Optional, needs chat:write.customize
-#   ${NOTIFY_CONFIG_BASE}/slackIconEmoji        Optional, needs chat:write.customize
-#   ${NOTIFY_CONFIG_BASE}/slackIconUrl          Optional, needs chat:write.customize
-#   ${NOTIFY_CONFIG_BASE}/slackRequired         Optional, 'true' makes validation failure block the deploy
-#   ${NOTIFY_CONFIG_BASE}/slackFailureUserIds   Optional, user IDs (U0...) to DM on failure, comma and/or space separated
-#   ${NOTIFY_CONFIG_BASE}/slackAlertUserIds     Optional, user IDs (U0...) to DM on alert, comma and/or space separated
-#   ${NOTIFY_CONFIG_BASE}/slackAlertMention     Optional, mention before alert posts, default <!here>, empty for none
-#   ${NOTIFY_CONFIG_BASE}/slack<Level>Prefix    Optional, text put before each message of that level, see slack_prefix
-#   ${NOTIFY_CONFIG_BASE}/slack<Kind>Reaction  Optional, reaction on the opening post, see slack_thread_react_for
-#   ${NOTIFY_CONFIG_BASE}/slackThreadLookbackDays Optional, days of history searched for NOTIFY_THREAD_KEY, default 30
-#   ${NOTIFY_CONFIG_BASE}/slackContext          'deploy' or 'build', picks the default DM wording
-#   ${NOTIFY_CONFIG_BASE}/slackCurl<Setting>    Optional, curl retry and timeouts, see slack_curl_settings
-#   ${NOTIFY_CONFIG_BASE}/slackFailureDmLeader  Optional, first line of failure DMs, default per slackContext
-#   ${NOTIFY_CONFIG_BASE}/slackFailureLinkLabel Optional, text before the thread link in failure DMs
-#   ${NOTIFY_CONFIG_BASE}/slackAlertDmLeader    Optional, first line of alert DMs
-#   ${NOTIFY_CONFIG_BASE}/slackAlertLinkLabel   Optional, text before the alert link in alert DMs
+#   ${NOTIFY_SECRETS_BASE}/slackAppBotUserOAuthToken Bot User OAuth Token, xoxb-...
+#   ${NOTIFY_CONFIG_BASE}/slackChannelId             Deploy thread channel, C0...
+#   ${NOTIFY_CONFIG_BASE}/slackAlertChannelId        Alert channel, C0..., separate from the deploy channel
+#   ${NOTIFY_CONFIG_BASE}/slackUsername              Optional, needs chat:write.customize
+#   ${NOTIFY_CONFIG_BASE}/slackIconEmoji             Optional, needs chat:write.customize
+#   ${NOTIFY_CONFIG_BASE}/slackIconUrl               Optional, needs chat:write.customize
+#   ${NOTIFY_CONFIG_BASE}/slackRequired              Optional, 'true' makes validation failure block the deploy
+#   ${NOTIFY_CONFIG_BASE}/slackFailureUserIds        Optional, user IDs (U0...) to DM on failure, comma and/or space separated
+#   ${NOTIFY_CONFIG_BASE}/slackAlertUserIds          Optional, user IDs (U0...) to DM on alert, comma and/or space separated
+#   ${NOTIFY_CONFIG_BASE}/slackAlertMention          Optional, mention before alert posts, default <!here>, empty for none
+#   ${NOTIFY_CONFIG_BASE}/slack<Level>Prefix         Optional, text put before each message of that level, see slack_prefix
+#   ${NOTIFY_CONFIG_BASE}/slack<Kind>Reaction        Optional, reaction on the opening post, see slack_thread_react_for
+#   ${NOTIFY_CONFIG_BASE}/slackThreadLookbackDays    Optional, days of history searched for NOTIFY_THREAD_KEY, default 30
+#   ${NOTIFY_CONFIG_BASE}/slackContext               'deploy' or 'build', picks the default DM wording
+#   ${NOTIFY_CONFIG_BASE}/slackCurl<Setting>         Optional, curl retry and timeouts, see slack_curl_settings
+#   ${NOTIFY_CONFIG_BASE}/slackFailureDmLeader       Optional, first line of failure DMs, default per slackContext
+#   ${NOTIFY_CONFIG_BASE}/slackFailureLinkLabel      Optional, text before the thread link in failure DMs
+#   ${NOTIFY_CONFIG_BASE}/slackAlertDmLeader         Optional, first line of alert DMs
+#   ${NOTIFY_CONFIG_BASE}/slackAlertLinkLabel        Optional, text before the alert link in alert DMs
 #
 # The optional entries' defaults are files in lib/notify-slack-defaults/, one
 # per entry, with deploy/ and build/ variants picked by slackContext for the DM
@@ -140,9 +140,9 @@ slack_request() {
   local method="$1"
   shift
   local token
-  token=$(slack_read_key "${NOTIFY_SECRETS_BASE}" slackBotToken)
+  token=$(slack_read_key "${NOTIFY_SECRETS_BASE}" slackAppBotUserOAuthToken)
   if [[ -z "${token}" ]]; then
-    echo "slack: slackBotToken not found in ${NOTIFY_SECRETS_BASE}" >&2
+    echo "slack: slackAppBotUserOAuthToken not found in ${NOTIFY_SECRETS_BASE}" >&2
     return 1
   fi
 

@@ -22,7 +22,7 @@ fail() {
 
 echo "=== Validate Slack Notify ==="
 
-token=$(slack_read_key "${NOTIFY_SECRETS_BASE}" slackBotToken)
+token=$(slack_read_key "${NOTIFY_SECRETS_BASE}" slackAppBotUserOAuthToken)
 channel=$(slack_read_key "${NOTIFY_CONFIG_BASE}" slackChannelId)
 alert_channel=$(slack_read_key "${NOTIFY_CONFIG_BASE}" slackAlertChannelId)
 username=$(slack_read_key "${NOTIFY_CONFIG_BASE}" slackUsername)
@@ -31,9 +31,9 @@ icon_url=$(slack_read_key "${NOTIFY_CONFIG_BASE}" slackIconUrl)
 required=$(slack_read_key "${NOTIFY_CONFIG_BASE}" slackRequired)
 
 if [[ -z "${token}" ]]; then
-  fail "slackBotToken not found in ${NOTIFY_SECRETS_BASE}"
+  fail "slackAppBotUserOAuthToken not found in ${NOTIFY_SECRETS_BASE}"
 elif [[ "${token}" != xoxb-* ]]; then
-  fail "slackBotToken is not a bot token (xoxb-...)"
+  fail "slackAppBotUserOAuthToken is not a Bot User OAuth Token (xoxb-...)"
 fi
 
 if [[ -z "${channel}" ]]; then
