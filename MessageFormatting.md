@@ -13,7 +13,7 @@ deploy sends, the level prefixes, the alert mention and the DM wording.
 | `> quote`                     | A quoted line                                   |
 | `<https://example.com\|Text>` | A link reading Text                             |
 | `https://example.com`         | The URL, linked, with a preview                 |
-| `:warning:`                   | The emoji named, ⚠️                             |
+| `:warning:`                   | The emoji named, ⚠️                              |
 | `<!here>`                     | @here, notifying everyone active in the channel |
 | `<!channel>`                  | @channel, notifying everyone in the channel     |
 | `<@U0123ABCD>`                | A mention of that member, by member ID          |

@@ -10,7 +10,7 @@
 #
 # Replaces the ConfigMap the env build generates, so it keeps the generated
 # project-name key. Supply the tokens. The keys end up as files under
-# NOTIFY_CONFIG_BASE. The bot token goes in the Secret, see
+# NOTIFY_CONFIG_BASE. The Bot User OAuth Token goes in the Secret, see
 # templates/env-secret/secret.template.yaml.
 #
 # Optional keys are commented out. Leave them out for the default. Present but

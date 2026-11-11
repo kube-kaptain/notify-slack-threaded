@@ -48,9 +48,9 @@ point sets `NOTIFY_THREAD_KEY` to `<environment>-<version>`.
 
 ### Secret
 
-| Entry           | Purpose                         |
-|-----------------|---------------------------------|
-| `slackBotToken` | The app's bot token, `xoxb-...` |
+| Entry                       | Purpose                                    |
+|-----------------------------|--------------------------------------------|
+| `slackAppBotUserOAuthToken` | The app's Bot User OAuth Token, `xoxb-...` |
 
 ### Required Config
 

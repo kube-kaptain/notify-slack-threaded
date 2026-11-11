@@ -21,7 +21,7 @@ setup() {
   export NOTIFY_WORK_BASE="${BATS_TEST_TMPDIR}/work"
   mkdir -p "${NOTIFY_CONFIG_BASE}" "${NOTIFY_SECRETS_BASE}" "${NOTIFY_WORK_BASE}"
 
-  echo "xoxb-test-token" > "${NOTIFY_SECRETS_BASE}/slackBotToken"
+  echo "xoxb-test-token" > "${NOTIFY_SECRETS_BASE}/slackAppBotUserOAuthToken"
   echo "C0DEPLOY" > "${NOTIFY_CONFIG_BASE}/slackChannelId"
   echo "C0ALERT" > "${NOTIFY_CONFIG_BASE}/slackAlertChannelId"
   echo "deploy" > "${NOTIFY_CONFIG_BASE}/slackContext"
